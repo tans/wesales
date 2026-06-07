@@ -255,6 +255,7 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
   const [isClearingAllCache, setIsClearingAllCache] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const messagePushContactsLoadedRef = useRef(false)
 
   // 安全设置 state
   const [authEnabled, setAuthEnabled] = useState(false)
@@ -462,45 +463,81 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
 
   const loadConfig = async () => {
     try {
-      const savedKey = await configService.getDecryptKey()
-      const savedPath = await configService.getDbPath()
-      const savedWxid = await configService.getMyWxid()
-      const savedCachePath = await configService.getCachePath()
-
-      const savedExportPath = await configService.getExportPath()
-      const savedLogEnabled = await configService.getLogEnabled()
-      const savedImageXorKey = await configService.getImageXorKey()
-      const savedImageAesKey = await configService.getImageAesKey()
-      const savedWhisperModelName = await configService.getWhisperModelName()
-      const savedWhisperModelDir = await configService.getWhisperModelDir()
-      const savedAutoTranscribe = await configService.getAutoTranscribeVoice()
-      const savedTranscribeLanguages = await configService.getTranscribeLanguages()
-      const savedNotificationEnabled = await configService.getNotificationEnabled()
-      const savedAiInsightNotificationEnabled = await configService.getAiInsightNotificationEnabled()
-      const savedNotificationPosition = await configService.getNotificationPosition()
-      const savedNotificationFilterMode = await configService.getNotificationFilterMode()
-      const savedNotificationFilterList = await configService.getNotificationFilterList()
-      const savedMessagePushEnabled = await configService.getMessagePushEnabled()
-      const savedMessagePushFilterMode = await configService.getMessagePushFilterMode()
-      const savedMessagePushFilterList = await configService.getMessagePushFilterList()
-      const contactsResult = await window.electronAPI.chat.getContacts({ lite: true })
-      const savedLaunchAtStartupStatus = await window.electronAPI.app.getLaunchAtStartupStatus()
-      const savedSilentStartup = await configService.getSilentStartup()
-      const savedWindowCloseBehavior = await configService.getWindowCloseBehavior()
-      const savedQuoteLayout = await configService.getQuoteLayout()
-      const savedUpdateChannel = await configService.getUpdateChannel()
-
-      const savedAuthEnabled = await window.electronAPI.auth.verifyEnabled()
-      const savedAuthUseHello = await configService.getAuthUseHello()
-      const savedIsLockMode = await window.electronAPI.auth.isLockMode()
-
-      const savedHttpApiToken = await configService.getHttpApiToken()
+      const [
+        savedKey,
+        savedPath,
+        savedWxid,
+        savedCachePath,
+        savedLogEnabled,
+        savedImageXorKey,
+        savedImageAesKey,
+        savedWhisperModelName,
+        savedWhisperModelDir,
+        savedAutoTranscribe,
+        savedTranscribeLanguages,
+        savedNotificationEnabled,
+        savedAiInsightNotificationEnabled,
+        savedNotificationPosition,
+        savedNotificationFilterMode,
+        savedNotificationFilterList,
+        savedMessagePushEnabled,
+        savedMessagePushFilterMode,
+        savedMessagePushFilterList,
+        savedLaunchAtStartupStatus,
+        savedSilentStartup,
+        savedWindowCloseBehavior,
+        savedQuoteLayout,
+        savedUpdateChannel,
+        savedAuthEnabled,
+        savedAuthUseHello,
+        savedIsLockMode,
+        savedHttpApiToken,
+        savedApiPort,
+        savedApiHost,
+        savedExcludeWords,
+        savedAutoDownloadHighRes,
+        savedAutoDownloadWhitelist,
+        savedAnalyticsConsent
+      ] = await Promise.all([
+        configService.getDecryptKey(),
+        configService.getDbPath(),
+        configService.getMyWxid(),
+        configService.getCachePath(),
+        configService.getLogEnabled(),
+        configService.getImageXorKey(),
+        configService.getImageAesKey(),
+        configService.getWhisperModelName(),
+        configService.getWhisperModelDir(),
+        configService.getAutoTranscribeVoice(),
+        configService.getTranscribeLanguages(),
+        configService.getNotificationEnabled(),
+        configService.getAiInsightNotificationEnabled(),
+        configService.getNotificationPosition(),
+        configService.getNotificationFilterMode(),
+        configService.getNotificationFilterList(),
+        configService.getMessagePushEnabled(),
+        configService.getMessagePushFilterMode(),
+        configService.getMessagePushFilterList(),
+        window.electronAPI.app.getLaunchAtStartupStatus(),
+        configService.getSilentStartup(),
+        configService.getWindowCloseBehavior(),
+        configService.getQuoteLayout(),
+        configService.getUpdateChannel(),
+        window.electronAPI.auth.verifyEnabled(),
+        configService.getAuthUseHello(),
+        window.electronAPI.auth.isLockMode(),
+        configService.getHttpApiToken(),
+        configService.getHttpApiPort(),
+        configService.getHttpApiHost(),
+        configService.getWordCloudExcludeWords(),
+        configService.getAutoDownloadHighRes(),
+        configService.getAutoDownloadWhitelist(),
+        configService.getAnalyticsConsent()
+      ])
       if (savedHttpApiToken) setHttpApiToken(savedHttpApiToken)
 
-      const savedApiPort = await configService.getHttpApiPort()
       if (savedApiPort) setHttpApiPort(savedApiPort)
 
-      const savedApiHost = await configService.getHttpApiHost()
       if (savedApiHost) setHttpApiHost(savedApiHost)
 
       setAuthEnabled(savedAuthEnabled)
@@ -538,9 +575,6 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
       setMessagePushEnabled(savedMessagePushEnabled)
       setMessagePushFilterMode(savedMessagePushFilterMode)
       setMessagePushFilterList(savedMessagePushFilterList)
-      if (contactsResult.success && Array.isArray(contactsResult.contacts)) {
-        setMessagePushContactOptions(contactsResult.contacts as ContactInfo[])
-      }
       setLaunchAtStartup(savedLaunchAtStartupStatus.enabled)
       setLaunchAtStartupSupported(savedLaunchAtStartupStatus.supported)
       setLaunchAtStartupReason(savedLaunchAtStartupStatus.reason || '')
@@ -560,13 +594,9 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
         }
       }
 
-      const savedExcludeWords = await configService.getWordCloudExcludeWords()
       setWordCloudExcludeWords(savedExcludeWords)
       setExcludeWordsInput(savedExcludeWords.join('\n'))
 
-      const savedAutoDownloadHighRes = await configService.getAutoDownloadHighRes()
-      const savedAutoDownloadWhitelist = await configService.getAutoDownloadWhitelist()
-      const savedAnalyticsConsent = await configService.getAnalyticsConsent()
       setAnalyticsConsent(savedAnalyticsConsent ?? false)
       setAutoDownloadHighRes(savedAutoDownloadHighRes)
       setAutoDownloadSelectedIds(new Set(savedAutoDownloadWhitelist))
@@ -583,38 +613,73 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
       if (savedWhisperModelDir) setWhisperModelDir(savedWhisperModelDir)
 
       // 加载 AI 见解配置
-      const savedAiInsightEnabled = await configService.getAiInsightEnabled()
-      const savedAiModelApiBaseUrl = await configService.getAiModelApiBaseUrl()
-      const savedAiModelApiKey = await configService.getAiModelApiKey()
-      const savedAiModelApiModel = await configService.getAiModelApiModel()
-      const savedAiModelApiMaxTokens = await configService.getAiModelApiMaxTokens()
-      const savedAiInsightSilenceDays = await configService.getAiInsightSilenceDays()
-      const savedAiInsightAllowContext = await configService.getAiInsightAllowContext()
-      const savedAiInsightAllowMomentsContext = await configService.getAiInsightAllowMomentsContext()
-      const savedAiInsightMomentsContextCount = await configService.getAiInsightMomentsContextCount()
-      const savedAiInsightMomentsBindings = await configService.getAiInsightMomentsBindings()
-      const savedAiInsightFilterMode = await configService.getAiInsightFilterMode()
-      const savedAiInsightFilterList = await configService.getAiInsightFilterList()
-      const savedAiInsightCooldownMinutes = await configService.getAiInsightCooldownMinutes()
-      const savedAiInsightScanIntervalHours = await configService.getAiInsightScanIntervalHours()
-      const savedAiInsightContextCount = await configService.getAiInsightContextCount()
-      const savedAiInsightSystemPrompt = await configService.getAiInsightSystemPrompt()
-      const savedAiInsightTelegramEnabled = await configService.getAiInsightTelegramEnabled()
-      const savedAiInsightTelegramToken = await configService.getAiInsightTelegramToken()
-      const savedAiInsightTelegramChatIds = await configService.getAiInsightTelegramChatIds()
-      const savedAiInsightAllowSocialContext = await configService.getAiInsightAllowSocialContext()
-      const savedAiInsightSocialContextCount = await configService.getAiInsightSocialContextCount()
-      const savedAiInsightWeiboCookie = await configService.getAiInsightWeiboCookie()
-      const savedAiInsightWeiboBindings = await configService.getAiInsightWeiboBindings()
-      const savedAiFootprintEnabled = await configService.getAiFootprintEnabled()
-      const savedAiFootprintSystemPrompt = await configService.getAiFootprintSystemPrompt()
-      const savedAiGroupSummaryEnabled = await configService.getAiGroupSummaryEnabled()
-      const savedAiGroupSummaryIntervalHours = await configService.getAiGroupSummaryIntervalHours()
-      const savedAiGroupSummarySystemPrompt = await configService.getAiGroupSummarySystemPrompt()
-      const savedAiGroupSummaryFilterList = await configService.getAiGroupSummaryFilterList()
-      const savedAiMessageInsightEnabled = await configService.getAiMessageInsightEnabled()
-      const savedAiMessageInsightContextCount = await configService.getAiMessageInsightContextCount()
-      const savedAiMessageInsightSystemPrompt = await configService.getAiMessageInsightSystemPrompt()
+      const [
+        savedAiInsightEnabled,
+        savedAiModelApiBaseUrl,
+        savedAiModelApiKey,
+        savedAiModelApiModel,
+        savedAiModelApiMaxTokens,
+        savedAiInsightSilenceDays,
+        savedAiInsightAllowContext,
+        savedAiInsightAllowMomentsContext,
+        savedAiInsightMomentsContextCount,
+        savedAiInsightMomentsBindings,
+        savedAiInsightFilterMode,
+        savedAiInsightFilterList,
+        savedAiInsightCooldownMinutes,
+        savedAiInsightScanIntervalHours,
+        savedAiInsightContextCount,
+        savedAiInsightSystemPrompt,
+        savedAiInsightTelegramEnabled,
+        savedAiInsightTelegramToken,
+        savedAiInsightTelegramChatIds,
+        savedAiInsightAllowSocialContext,
+        savedAiInsightSocialContextCount,
+        savedAiInsightWeiboCookie,
+        savedAiInsightWeiboBindings,
+        savedAiFootprintEnabled,
+        savedAiFootprintSystemPrompt,
+        savedAiGroupSummaryEnabled,
+        savedAiGroupSummaryIntervalHours,
+        savedAiGroupSummarySystemPrompt,
+        savedAiGroupSummaryFilterList,
+        savedAiMessageInsightEnabled,
+        savedAiMessageInsightContextCount,
+        savedAiMessageInsightSystemPrompt
+      ] = await Promise.all([
+        configService.getAiInsightEnabled(),
+        configService.getAiModelApiBaseUrl(),
+        configService.getAiModelApiKey(),
+        configService.getAiModelApiModel(),
+        configService.getAiModelApiMaxTokens(),
+        configService.getAiInsightSilenceDays(),
+        configService.getAiInsightAllowContext(),
+        configService.getAiInsightAllowMomentsContext(),
+        configService.getAiInsightMomentsContextCount(),
+        configService.getAiInsightMomentsBindings(),
+        configService.getAiInsightFilterMode(),
+        configService.getAiInsightFilterList(),
+        configService.getAiInsightCooldownMinutes(),
+        configService.getAiInsightScanIntervalHours(),
+        configService.getAiInsightContextCount(),
+        configService.getAiInsightSystemPrompt(),
+        configService.getAiInsightTelegramEnabled(),
+        configService.getAiInsightTelegramToken(),
+        configService.getAiInsightTelegramChatIds(),
+        configService.getAiInsightAllowSocialContext(),
+        configService.getAiInsightSocialContextCount(),
+        configService.getAiInsightWeiboCookie(),
+        configService.getAiInsightWeiboBindings(),
+        configService.getAiFootprintEnabled(),
+        configService.getAiFootprintSystemPrompt(),
+        configService.getAiGroupSummaryEnabled(),
+        configService.getAiGroupSummaryIntervalHours(),
+        configService.getAiGroupSummarySystemPrompt(),
+        configService.getAiGroupSummaryFilterList(),
+        configService.getAiMessageInsightEnabled(),
+        configService.getAiMessageInsightContextCount(),
+        configService.getAiMessageInsightSystemPrompt()
+      ])
 
       setAiInsightEnabled(savedAiInsightEnabled)
       setAiModelApiBaseUrl(savedAiModelApiBaseUrl)
@@ -859,6 +924,15 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
     return normalizeSessionIds(sessionsResult.sessions.map((session) => session.username))
   }
 
+  const ensureMessagePushContactsLoaded = async () => {
+    if (messagePushContactsLoadedRef.current) return
+    const contactsResult = await window.electronAPI.chat.getContacts({ lite: true })
+    messagePushContactsLoadedRef.current = true
+    if (contactsResult.success && Array.isArray(contactsResult.contacts)) {
+      setMessagePushContactOptions(contactsResult.contacts as ContactInfo[])
+    }
+  }
+
   const ensureAntiRevokeSessionsLoaded = async (): Promise<string[]> => {
     const current = getCurrentAntiRevokeSessionIds()
     if (current.length > 0) return current
@@ -1099,6 +1173,26 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
       } catch (e: any) {
         if (!canceled) {
           showMessage(`加载会话失败: ${e?.message || String(e)}`, false)
+        }
+      }
+    })()
+    return () => {
+      canceled = true
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab !== 'notification') return
+    let canceled = false
+    ;(async () => {
+      try {
+        await Promise.all([
+          ensureChatSessionsLoaded(),
+          ensureMessagePushContactsLoaded()
+        ])
+      } catch (e: any) {
+        if (!canceled) {
+          showMessage(`加载通知会话失败: ${e?.message || String(e)}`, false)
         }
       }
     })()
@@ -5655,8 +5749,6 @@ JSON 输出格式：
 }
 
 export default SettingsPage
-
-
 
 
 

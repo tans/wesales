@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Home, MessageSquare, BarChart3, FileText, Settings, Download, Aperture, UserCircle, Lock, LockOpen, ChevronUp, FolderClosed, Footprints, Users, ArchiveRestore, Sparkles } from 'lucide-react'
+import { Home, MessageSquare, BarChart3, Settings, Download, UserCircle, Lock, LockOpen, ChevronUp, FolderClosed, Footprints, Users, ArchiveRestore, Sparkles, Radar, Network } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import * as configService from '../services/config'
 import { onExportSessionStatus, requestExportSessionStatus } from '../services/exportBridge'
@@ -314,17 +314,55 @@ function Sidebar({ collapsed }: SidebarProps) {
     <>
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <nav className="nav-menu">
-          {/* 首页 */}
+          <div className="nav-section-label">{collapsed ? 'WS' : 'WeSales'}</div>
+
           <NavLink
             to="/home"
             className={`nav-item ${isActive('/home') ? 'active' : ''}`}
-            title={collapsed ? '首页' : undefined}
+            title={collapsed ? '工作台' : undefined}
           >
             <span className="nav-icon"><Home size={20} /></span>
-            <span className="nav-label">首页</span>
+            <span className="nav-label">工作台</span>
           </NavLink>
 
-          {/* 聊天 */}
+          <NavLink
+            to="/sales-dashboard"
+            className={`nav-item ${isActive('/sales-dashboard') ? 'active' : ''}`}
+            title={collapsed ? 'AI客户雷达' : undefined}
+          >
+            <span className="nav-icon"><Radar size={20} /></span>
+            <span className="nav-label">AI客户雷达</span>
+          </NavLink>
+
+          <NavLink
+            to="/friend-analysis"
+            className={`nav-item ${isActive('/friend-analysis') ? 'active' : ''}`}
+            title={collapsed ? '好友分析' : undefined}
+          >
+            <span className="nav-icon"><UserCircle size={20} /></span>
+            <span className="nav-label">好友分析</span>
+          </NavLink>
+
+          <NavLink
+            to="/customer-360"
+            className={`nav-item ${isActive('/customer-360') ? 'active' : ''}`}
+            title={collapsed ? '客户360' : undefined}
+          >
+            <span className="nav-icon"><Network size={20} /></span>
+            <span className="nav-label">客户360</span>
+          </NavLink>
+
+          <NavLink
+            to="/group-radar"
+            className={`nav-item ${isActive('/group-radar') ? 'active' : ''}`}
+            title={collapsed ? '群分析' : undefined}
+          >
+            <span className="nav-icon"><Users size={20} /></span>
+            <span className="nav-label">群分析</span>
+          </NavLink>
+
+          <div className="nav-section-label secondary">{collapsed ? '工' : '原有工具'}</div>
+
           <NavLink
             to="/chat"
             className={`nav-item ${isActive('/chat') ? 'active' : ''}`}
@@ -332,16 +370,6 @@ function Sidebar({ collapsed }: SidebarProps) {
           >
             <span className="nav-icon"><MessageSquare size={20} /></span>
             <span className="nav-label">聊天</span>
-          </NavLink>
-
-          {/* 朋友圈 */}
-          <NavLink
-            to="/sns"
-            className={`nav-item ${isActive('/sns') ? 'active' : ''}`}
-            title={collapsed ? '朋友圈' : undefined}
-          >
-            <span className="nav-icon"><Aperture size={20} /></span>
-            <span className="nav-label">朋友圈</span>
           </NavLink>
 
           <NavLink
@@ -381,16 +409,6 @@ function Sidebar({ collapsed }: SidebarProps) {
           >
             <span className="nav-icon"><BarChart3 size={20} /></span>
             <span className="nav-label">聊天分析</span>
-          </NavLink>
-
-          {/* 年度报告 */}
-          <NavLink
-            to="/annual-report"
-            className={`nav-item ${isActive('/annual-report') ? 'active' : ''}`}
-            title={collapsed ? '年度报告' : undefined}
-          >
-            <span className="nav-icon"><FileText size={20} /></span>
-            <span className="nav-label">年度报告</span>
           </NavLink>
 
           {/* 我的足迹 */}

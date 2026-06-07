@@ -9,8 +9,6 @@ import ChatPage from './pages/ChatPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import AnalyticsWelcomePage from './pages/AnalyticsWelcomePage'
 import ChatAnalyticsHubPage from './pages/ChatAnalyticsHubPage'
-import AnnualReportPage from './pages/AnnualReportPage'
-import AnnualReportWindow from './pages/AnnualReportWindow'
 import DualReportPage from './pages/DualReportPage'
 import DualReportWindow from './pages/DualReportWindow'
 import AgreementPage from './pages/AgreementPage'
@@ -20,7 +18,6 @@ import ExportPage from './pages/ExportPage'
 import MyFootprintPage from './pages/MyFootprintPage'
 import VideoWindow from './pages/VideoWindow'
 import ImageWindow from './pages/ImageWindow'
-import SnsPage from './pages/SnsPage'
 import BizPage from './pages/BizPage'
 import ContactsPage from './pages/ContactsPage'
 import ResourcesPage from './pages/ResourcesPage'
@@ -29,6 +26,10 @@ import NotificationWindow from './pages/NotificationWindow'
 import AccountManagementPage from './pages/AccountManagementPage'
 import BackupPage from './pages/BackupPage'
 import InsightInboxPage from './pages/InsightInboxPage'
+import SalesDashboardPage from './pages/sales/SalesDashboardPage'
+import FriendAnalysisPage from './pages/sales/FriendAnalysisPage'
+import Customer360Page from './pages/sales/Customer360Page'
+import GroupRadarPage from './pages/sales/GroupRadarPage'
 
 import { useAppStore } from './stores/appStore'
 import { themes, useThemeStore, type ThemeId, type ThemeMode } from './stores/themeStore'
@@ -82,7 +83,6 @@ function App() {
   const isChatHistoryWindow = location.pathname.startsWith('/chat-history/') || location.pathname.startsWith('/chat-history-inline/')
   const isStandaloneChatWindow = location.pathname === '/chat-window'
   const isNotificationWindow = location.pathname === '/notification-window'
-  const isAnnualReportWindow = location.pathname === '/annual-report/view'
   const isDualReportWindow = location.pathname === '/dual-report/view'
   const isSettingsRoute = location.pathname === '/settings'
   const settingsRouteState = location.state as { backgroundLocation?: Location; initialTab?: unknown } | null
@@ -133,7 +133,7 @@ function App() {
     const body = document.body
     const appRoot = document.getElementById('app')
 
-    if (isOnboardingWindow || isNotificationWindow || isAnnualReportWindow || isDualReportWindow) {
+    if (isOnboardingWindow || isNotificationWindow || isDualReportWindow) {
       root.style.background = 'transparent'
       body.style.background = 'transparent'
       body.style.overflow = 'hidden'
@@ -150,7 +150,7 @@ function App() {
         appRoot.style.overflow = ''
       }
     }
-  }, [isOnboardingWindow, isNotificationWindow, isAnnualReportWindow, isDualReportWindow])
+  }, [isOnboardingWindow, isNotificationWindow, isDualReportWindow])
 
   // 应用主题 (accent color + light/dark mode)
   useEffect(() => {
@@ -171,7 +171,7 @@ function App() {
     }
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [currentTheme, themeMode, isOnboardingWindow, isNotificationWindow, isAnnualReportWindow, isDualReportWindow])
+  }, [currentTheme, themeMode, isOnboardingWindow, isNotificationWindow, isDualReportWindow])
 
   // 读取已保存的主题设置
   useEffect(() => {
@@ -530,11 +530,6 @@ function App() {
     return <NotificationWindow />
   }
 
-  // 独立年度报告全屏窗口
-  if (isAnnualReportWindow) {
-    return <AnnualReportWindow />
-  }
-
   // 独立双人报告全屏窗口
   if (isDualReportWindow) {
     return <DualReportWindow />
@@ -703,6 +698,10 @@ function App() {
             <Routes location={routeLocation}>
               <Route path="/" element={<HomePage />} />
               <Route path="/home" element={<HomePage />} />
+              <Route path="/sales-dashboard" element={<SalesDashboardPage />} />
+              <Route path="/friend-analysis" element={<FriendAnalysisPage />} />
+              <Route path="/customer-360" element={<Customer360Page />} />
+              <Route path="/group-radar" element={<GroupRadarPage />} />
               <Route path="/account-management" element={<AccountManagementPage />} />
               <Route path="/chat" element={<ChatPage />} />
 
@@ -712,14 +711,11 @@ function App() {
               <Route path="/analytics/group" element={<GroupAnalyticsPage />} />
               <Route path="/analytics/view" element={<RouteStateRedirect to="/analytics/private/view" />} />
               <Route path="/group-analytics" element={<RouteStateRedirect to="/analytics/group" />} />
-              <Route path="/annual-report" element={<AnnualReportPage />} />
-              <Route path="/annual-report/view" element={<AnnualReportWindow />} />
               <Route path="/dual-report" element={<DualReportPage />} />
               <Route path="/dual-report/view" element={<DualReportWindow />} />
               <Route path="/footprint" element={<MyFootprintPage />} />
 
               <Route path="/export" element={<div className="export-route-anchor" aria-hidden="true" />} />
-              <Route path="/sns" element={<SnsPage />} />
               <Route path="/insight-inbox" element={<InsightInboxPage />} />
               <Route path="/biz" element={<BizPage />} />
               <Route path="/contacts" element={<ContactsPage />} />
