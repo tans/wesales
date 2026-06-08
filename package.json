@@ -127,8 +127,7 @@
     "linux": {
       "icon": "public/icon.png",
       "target": [
-        "appimage",
-        "tar.gz"
+        "appimage"
       ],
       "category": "Utility",
       "executableName": "weflow",

@@ -342,7 +342,6 @@ jobs:
           if [ -z "$MAC_ASSET" ]; then
             MAC_ASSET="$(pick_asset "arm64\\.zip$")"
           fi
-          LINUX_TAR_ASSET="$(pick_asset "\\.tar\\.gz$")"
           LINUX_APPIMAGE_ASSET="$(pick_asset "\\.AppImage$")"
 
           build_link() {
@@ -355,7 +354,6 @@ jobs:
           WINDOWS_URL="$(build_link "$WINDOWS_ASSET")"
           WINDOWS_ARM64_URL="$(build_link "$WINDOWS_ARM64_ASSET")"
           MAC_URL="$(build_link "$MAC_ASSET")"
-          LINUX_TAR_URL="$(build_link "$LINUX_TAR_ASSET")"
           LINUX_APPIMAGE_URL="$(build_link "$LINUX_APPIMAGE_ASSET")"
 
           cat > release_notes.md <<EOF
@@ -369,7 +367,6 @@ jobs:
           - Windows x64（Win10+）: [点击下载](${WINDOWS_URL:-$RELEASE_PAGE})
           - Windows arm64: [点击下载](${WINDOWS_ARM64_URL:-$RELEASE_PAGE})
           - macOS（M系列芯片）: [点击下载](${MAC_URL:-$RELEASE_PAGE})
-          - Linux (.tar.gz): [点击下载](${LINUX_TAR_URL:-$RELEASE_PAGE})
           - Linux (.AppImage): [点击下载](${LINUX_APPIMAGE_URL:-$RELEASE_PAGE})
 
           ## macOS 安装提示
