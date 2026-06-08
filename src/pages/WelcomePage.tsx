@@ -14,7 +14,7 @@ import './WelcomePage.scss'
 const isMac = navigator.userAgent.toLowerCase().includes('mac')
 const isLinux = navigator.userAgent.toLowerCase().includes('linux')
 const isWindows = !isMac && !isLinux
-const MAC_KEY_FAQ_URL = 'https://github.com/hicccc77/WeFlow/blob/main/docs/MAC-KEY-FAQ.md'
+const MAC_KEY_FAQ_URL = 'https://github.com/tans/wesales/blob/main/docs/MAC-KEY-FAQ.md'
 
 const DB_PATH_CHINESE_ERROR = '路径包含中文字符，迁移至全英文目录后再试'
 const dbPathPlaceholder = isMac

@@ -594,7 +594,7 @@ function App() {
                     https://weflow.top
                   </a>
                   &nbsp;·&nbsp;
-                  <a href="https://github.com/hicccc77/WeFlow" target="_blank" rel="noreferrer">
+                  <a href="https://github.com/tans/wesales" target="_blank" rel="noreferrer">
                     GitHub 仓库
                   </a>
                 </span>

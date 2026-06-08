@@ -11,6 +11,8 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
+  ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
 jobs:
   release-mac-arm64:
@@ -28,7 +30,11 @@ jobs:
           node-version: 24
           cache: "npm"
       - name: Install Dependencies
-        run: npm install --ignore-scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npm ci --ignore-scripts
 
       - name: Ensure mac key helpers are executable
         shell: bash
@@ -66,11 +72,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source .github/scripts/release-utils.sh
           export ELECTRON_BUILDER_BINARIES_MIRROR="https://github.com/electron-userland/electron-builder-binaries/releases/download/"
           echo "Using ELECTRON_BUILDER_BINARIES_MIRROR=$ELECTRON_BUILDER_BINARIES_MIRROR"
-          if ! npx electron-builder --mac dmg zip --arm64 --publish always '--config.npmRebuild=false' '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}'; then
+          if ! retry_cmd 5 10 npx electron-builder --mac dmg zip --arm64 --publish always '--config.npmRebuild=false' '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}'; then
             echo "::warning::DMG packaging failed (hdiutil instability on runner). Retrying with ZIP only."
-            npx electron-builder --mac zip --arm64 --publish always '--config.npmRebuild=false' '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}'
+            retry_cmd 5 10 npx electron-builder --mac zip --arm64 --publish always '--config.npmRebuild=false' '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}'
           fi
 
       - name: Inject minimumVersion into latest yml
@@ -110,7 +117,11 @@ jobs:
           node-version: 24
           cache: "npm"
       - name: Install Dependencies
-        run: npm install
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npm ci
 
       - name: Ensure linux key helper is executable
         shell: bash
@@ -133,8 +144,11 @@ jobs:
       - name: Package and Publish Linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          npx electron-builder --linux --publish always '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}'
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npx electron-builder --linux --publish always '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}'
 
       - name: Inject minimumVersion into latest yml
         env:
@@ -168,7 +182,11 @@ jobs:
           node-version: 24
           cache: 'npm'
       - name: Install Dependencies
-        run: npm install
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npm ci
 
       - name: Sync version with tag
         shell: bash
@@ -186,8 +204,11 @@ jobs:
       - name: Package and Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          npx electron-builder --win nsis --x64 --publish always '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}' '--config.artifactName=${productName}-${version}-x64-Setup.${ext}'
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npx electron-builder --win nsis --x64 --publish always '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}' '--config.artifactName=${productName}-${version}-x64-Setup.${ext}'
 
       - name: Inject minimumVersion into latest yml
         env:
@@ -221,7 +242,11 @@ jobs:
           node-version: 24
           cache: 'npm'
       - name: Install Dependencies
-        run: npm install
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npm ci
 
       - name: Sync version with tag
         shell: bash
@@ -239,8 +264,11 @@ jobs:
       - name: Package and Publish Windows arm64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          npx electron-builder --win nsis --arm64 --publish always '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}' '--config.publish.channel=latest-arm64' '--config.artifactName=${productName}-${version}-arm64-Setup.${ext}'
+          set -euo pipefail
+          source .github/scripts/release-utils.sh
+          retry_cmd 5 10 npx electron-builder --win nsis --arm64 --publish always '--config.publish.owner=${{ github.repository_owner }}' '--config.publish.repo=${{ github.event.repository.name }}' '--config.publish.channel=latest-arm64' '--config.artifactName=${productName}-${version}-arm64-Setup.${ext}'
 
       - name: Inject minimumVersion into latest yml
         env:
