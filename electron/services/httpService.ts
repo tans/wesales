@@ -14,6 +14,8 @@ import { videoService } from './videoService'
 import { imageDecryptService } from './imageDecryptService'
 import { groupAnalyticsService } from './groupAnalyticsService'
 import { snsService } from './snsService'
+import { sqliteMessageCacheService } from './messageCacheService'
+import { messageSyncService } from './messageSyncService'
 
 // ChatLab 格式定义
 interface ChatLabHeader {
@@ -461,6 +463,15 @@ class HttpService {
                 this.sendJson(res, { status: 'ok' })
             } else if (pathname === '/api/v1/push/messages') {
                 this.handleMessagePushStream(req, res, url)
+            } else if (pathname === '/api/v1/messages-cache') {
+                if (req.method !== 'GET') return this.sendMethodNotAllowed(res, 'GET')
+                await this.handleMessagesCache(url, res)
+            } else if (pathname === '/api/v1/messages/sync') {
+                if (req.method !== 'POST') return this.sendMethodNotAllowed(res, 'POST')
+                await this.handleMessagesSync(url, res)
+            } else if (pathname === '/api/v1/messages/sync/status') {
+                if (req.method !== 'GET') return this.sendMethodNotAllowed(res, 'GET')
+                await this.handleMessagesSyncStatus(url, res)
             } else if (pathname === '/api/v1/messages') {
                 await this.handleMessages(url, res)
             } else if (pathname === '/api/v1/sessions') {
@@ -817,6 +828,101 @@ class HttpService {
       .map((item) => item.trim())
       .filter(Boolean)
     return values.length > 0 ? Array.from(new Set(values)) : undefined
+  }
+
+  private async handleMessagesCache(url: URL, res: http.ServerResponse): Promise<void> {
+    const requestStartedAt = Date.now()
+    const talker = (url.searchParams.get('talker') || '').trim()
+    const limit = this.parseIntParam(url.searchParams.get('limit'), 100, 1, 1000)
+    const before = this.parseTimeParam(url.searchParams.get('before'))
+    const start = this.parseTimeParam(url.searchParams.get('start'))
+    const end = this.parseTimeParam(url.searchParams.get('end'), true)
+
+    if (!talker) {
+      this.sendError(res, 400, 'Missing required parameter: talker')
+      return
+    }
+
+    try {
+      const result = sqliteMessageCacheService.queryMessages({ talker, limit, before, start, end })
+      const syncState = sqliteMessageCacheService.getSyncState(talker)
+      const now = Date.now()
+      this.sendJson(res, {
+        success: true,
+        source: 'cache',
+        talker,
+        count: result.items.length,
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+        sync: {
+          status: syncState?.syncStatus || 'idle',
+          lastSyncStartedAt: syncState?.lastSyncStartedAt || undefined,
+          lastSyncFinishedAt: syncState?.lastSyncFinishedAt || undefined,
+          lastError: syncState?.lastError || undefined,
+          cacheLagMs: syncState?.lastSyncFinishedAt ? Math.max(0, now - syncState.lastSyncFinishedAt) : undefined
+        },
+        items: result.items.map((item) => ({
+          id: item.id,
+          talker: item.talker,
+          localId: item.localId,
+          serverId: item.msgSvrId,
+          localType: item.type,
+          createTime: item.createTime,
+          sortSeq: item.sequence,
+          isSend: item.isSender,
+          senderUsername: item.senderUsername,
+          content: item.displayContent || item.content,
+          rawContent: item.rawContent,
+          parsedContent: item.displayContent
+        }))
+      })
+      console.log(`[HttpService][messages-cache] request done total=${Date.now() - requestStartedAt}ms talker=${talker} limit=${limit} count=${result.items.length} hasMore=${result.hasMore}`)
+    } catch (error) {
+      console.error('[HttpService][messages-cache] request failed:', error)
+      this.sendError(res, 500, String(error))
+    }
+  }
+
+  private async handleMessagesSync(url: URL, res: http.ServerResponse): Promise<void> {
+    const talker = (url.searchParams.get('talker') || '').trim()
+    const limit = this.parseIntParam(url.searchParams.get('limit'), 500, 1, 500)
+    const start = this.parseTimeParam(url.searchParams.get('start'))
+    const end = this.parseTimeParam(url.searchParams.get('end'), true)
+
+    if (!talker) {
+      this.sendError(res, 400, 'Missing required parameter: talker')
+      return
+    }
+
+    try {
+      const result = messageSyncService.triggerSync(talker, { limit, start, end })
+      this.sendJson(res, result)
+    } catch (error) {
+      this.sendError(res, 500, String(error))
+    }
+  }
+
+  private async handleMessagesSyncStatus(url: URL, res: http.ServerResponse): Promise<void> {
+    const jobId = (url.searchParams.get('jobId') || '').trim()
+    const talker = (url.searchParams.get('talker') || '').trim()
+
+    if (!jobId && !talker) {
+      this.sendError(res, 400, 'Missing required parameter: jobId or talker')
+      return
+    }
+
+    try {
+      if (jobId) {
+        const job = messageSyncService.getJob(jobId)
+        this.sendJson(res, { success: true, job })
+        return
+      }
+
+      const status = messageSyncService.getTalkerStatus(talker)
+      this.sendJson(res, { success: true, talker, ...status })
+    } catch (error) {
+      this.sendError(res, 500, String(error))
+    }
   }
 
   private parseMediaOptions(url: URL): ApiMediaOptions {
