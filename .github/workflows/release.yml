@@ -90,7 +90,10 @@ jobs:
           TAG=${GITHUB_REF_NAME}
           REPO=${{ github.repository }}
           MINIMUM_VERSION="4.1.7"
-          wait_for_release_id "$REPO" "$TAG" 12 2 >/dev/null
+          if ! wait_for_release_id "$REPO" "$TAG" 60 5 >/dev/null; then
+            echo "::warning::Release $TAG is not ready; skip mac latest yml minimumVersion injection."
+            exit 0
+          fi
           for YML_FILE in latest-mac.yml latest-arm64-mac.yml; do
             if ! retry_cmd 5 3 gh release download "$TAG" --repo "$REPO" --pattern "$YML_FILE" --output "/tmp/$YML_FILE"; then
               echo "Skip $YML_FILE because download failed after retries."
@@ -160,7 +163,10 @@ jobs:
           TAG=${GITHUB_REF_NAME}
           REPO=${{ github.repository }}
           MINIMUM_VERSION="4.1.7"
-          wait_for_release_id "$REPO" "$TAG" 12 2 >/dev/null
+          if ! wait_for_release_id "$REPO" "$TAG" 60 5 >/dev/null; then
+            echo "::warning::Release $TAG is not ready; skip linux latest yml minimumVersion injection."
+            exit 0
+          fi
           retry_cmd 5 3 gh release download "$TAG" --repo "$REPO" --pattern "latest-linux.yml" --output "/tmp/latest-linux.yml" || true
           if [ -f /tmp/latest-linux.yml ] && ! grep -q 'minimumVersion' /tmp/latest-linux.yml; then
             echo "minimumVersion: $MINIMUM_VERSION" >> /tmp/latest-linux.yml
@@ -220,7 +226,10 @@ jobs:
           TAG=${GITHUB_REF_NAME}
           REPO=${{ github.repository }}
           MINIMUM_VERSION="4.1.7"
-          wait_for_release_id "$REPO" "$TAG" 12 2 >/dev/null
+          if ! wait_for_release_id "$REPO" "$TAG" 60 5 >/dev/null; then
+            echo "::warning::Release $TAG is not ready; skip windows latest yml minimumVersion injection."
+            exit 0
+          fi
           retry_cmd 5 3 gh release download "$TAG" --repo "$REPO" --pattern "latest.yml" --output "/tmp/latest.yml" || true
           if [ -f /tmp/latest.yml ] && ! grep -q 'minimumVersion' /tmp/latest.yml; then
             echo "minimumVersion: $MINIMUM_VERSION" >> /tmp/latest.yml
@@ -280,7 +289,10 @@ jobs:
           TAG=${GITHUB_REF_NAME}
           REPO=${{ github.repository }}
           MINIMUM_VERSION="4.1.7"
-          wait_for_release_id "$REPO" "$TAG" 12 2 >/dev/null
+          if ! wait_for_release_id "$REPO" "$TAG" 60 5 >/dev/null; then
+            echo "::warning::Release $TAG is not ready; skip windows arm64 latest yml minimumVersion injection."
+            exit 0
+          fi
           retry_cmd 5 3 gh release download "$TAG" --repo "$REPO" --pattern "latest-arm64.yml" --output "/tmp/latest-arm64.yml" || true
           if [ -f /tmp/latest-arm64.yml ] && ! grep -q 'minimumVersion' /tmp/latest-arm64.yml; then
             echo "minimumVersion: $MINIMUM_VERSION" >> /tmp/latest-arm64.yml
@@ -312,7 +324,7 @@ jobs:
           TAG="$GITHUB_REF_NAME"
           REPO="$GITHUB_REPOSITORY"
           RELEASE_PAGE="https://github.com/$REPO/releases/tag/$TAG"
-          wait_for_release_id "$REPO" "$TAG" 12 2 >/dev/null
+          wait_for_release_id "$REPO" "$TAG" 60 5 >/dev/null
 
           capture_cmd_with_retry ASSETS_JSON 8 3 gh release view "$TAG" --repo "$REPO" --json assets
 
