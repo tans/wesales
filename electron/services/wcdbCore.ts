@@ -54,9 +54,6 @@ export class WcdbCore {
   private wcdbGetMessageByServerId: any = null
   private wcdbGetDisplayNames: any = null
   private wcdbGetAvatarUrls: any = null
-  private wcdbGetGroupMemberCount: any = null
-  private wcdbGetGroupMemberCounts: any = null
-  private wcdbGetGroupMembers: any = null
   private wcdbGetGroupNicknames: any = null
   private wcdbGetMessageTables: any = null
   private wcdbGetMessageMeta: any = null
@@ -846,19 +843,6 @@ export class WcdbCore {
 
       // wcdb_status wcdb_get_avatar_urls(wcdb_handle handle, const char* usernames_json, char** out_json)
       this.wcdbGetAvatarUrls = this.lib.func('int32 wcdb_get_avatar_urls(int64 handle, const char* usernamesJson, _Out_ void** outJson)')
-
-      // wcdb_status wcdb_get_group_member_count(wcdb_handle handle, const char* chatroom_id, int32_t* out_count)
-      this.wcdbGetGroupMemberCount = this.lib.func('int32 wcdb_get_group_member_count(int64 handle, const char* chatroomId, _Out_ int32* outCount)')
-
-      // wcdb_status wcdb_get_group_member_counts(wcdb_handle handle, const char* chatroom_ids_json, char** out_json)
-      try {
-        this.wcdbGetGroupMemberCounts = this.lib.func('int32 wcdb_get_group_member_counts(int64 handle, const char* chatroomIdsJson, _Out_ void** outJson)')
-      } catch {
-        this.wcdbGetGroupMemberCounts = null
-      }
-
-      // wcdb_status wcdb_get_group_members(wcdb_handle handle, const char* chatroom_id, char** out_json)
-      this.wcdbGetGroupMembers = this.lib.func('int32 wcdb_get_group_members(int64 handle, const char* chatroomId, _Out_ void** outJson)')
 
       // wcdb_status wcdb_get_group_nicknames(wcdb_handle handle, const char* chatroom_id, char** out_json)
       try {
@@ -2747,71 +2731,6 @@ export class WcdbCore {
       return { success: true, map: resultMap }
     } catch (e) {
       console.error('[wcdbCore] getAvatarUrls 异常:', e)
-      return { success: false, error: String(e) }
-    }
-  }
-
-  async getGroupMemberCount(chatroomId: string): Promise<{ success: boolean; count?: number; error?: string }> {
-    if (!this.ensureReady()) {
-      return { success: false, error: 'WCDB 未连接' }
-    }
-    try {
-      const outCount = [0]
-      const result = this.wcdbGetGroupMemberCount(this.handle, chatroomId, outCount)
-      if (result !== 0) {
-        return { success: false, error: `获取群成员数量失败: ${result}` }
-      }
-      return { success: true, count: outCount[0] }
-    } catch (e) {
-      return { success: false, error: String(e) }
-    }
-  }
-
-  async getGroupMemberCounts(chatroomIds: string[]): Promise<{ success: boolean; map?: Record<string, number>; error?: string }> {
-    if (!this.ensureReady()) {
-      return { success: false, error: 'WCDB 未连接' }
-    }
-    if (chatroomIds.length === 0) return { success: true, map: {} }
-    if (!this.wcdbGetGroupMemberCounts) {
-      const map: Record<string, number> = {}
-      for (const chatroomId of chatroomIds) {
-        const result = await this.getGroupMemberCount(chatroomId)
-        if (result.success && typeof result.count === 'number') {
-          map[chatroomId] = result.count
-        }
-      }
-      return { success: true, map }
-    }
-    try {
-      const outPtr = [null as any]
-      const result = this.wcdbGetGroupMemberCounts(this.handle, JSON.stringify(chatroomIds), outPtr)
-      if (result !== 0 || !outPtr[0]) {
-        return { success: false, error: `获取群成员数量失败: ${result}` }
-      }
-      const jsonStr = this.decodeJsonPtr(outPtr[0])
-      if (!jsonStr) return { success: false, error: '解析群成员数量失败' }
-      const map = JSON.parse(jsonStr)
-      return { success: true, map }
-    } catch (e) {
-      return { success: false, error: String(e) }
-    }
-  }
-
-  async getGroupMembers(chatroomId: string): Promise<{ success: boolean; members?: any[]; error?: string }> {
-    if (!this.ensureReady()) {
-      return { success: false, error: 'WCDB 未连接' }
-    }
-    try {
-      const outPtr = [null as any]
-      const result = this.wcdbGetGroupMembers(this.handle, chatroomId, outPtr)
-      if (result !== 0 || !outPtr[0]) {
-        return { success: false, error: `获取群成员失败: ${result}` }
-      }
-      const jsonStr = this.decodeJsonPtr(outPtr[0])
-      if (!jsonStr) return { success: false, error: '解析群成员失败' }
-      const members = JSON.parse(jsonStr)
-      return { success: true, members }
-    } catch (e) {
       return { success: false, error: String(e) }
     }
   }

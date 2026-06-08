@@ -346,29 +346,45 @@ class HttpService {
     /**
      * 解析 POST 请求的 JSON Body
      */
-    private async parseBody(req: http.IncomingMessage): Promise<Record<string, any>> {
-        if (req.method !== 'POST') return {}
+    private parseBody(req: http.IncomingMessage): Promise<Record<string, any>> {
+        if (req.method !== 'POST') return Promise.resolve({})
+
         const MAX_BODY_SIZE = 10 * 1024 * 1024 // 10MB
         return new Promise((resolve) => {
             let body = ''
             let bodySize = 0
+            let finished = false
+
+            const finish = (value: Record<string, any> = {}) => {
+                if (finished) return
+                finished = true
+                resolve(value)
+            }
+
             req.on('data', chunk => {
+                if (finished) return
                 bodySize += chunk.length
                 if (bodySize > MAX_BODY_SIZE) {
+                    finish({})
                     req.destroy()
-                    resolve({})
                     return
                 }
                 body += chunk.toString()
             })
             req.on('end', () => {
+                if (!body.trim()) {
+                    finish({})
+                    return
+                }
                 try {
-                    resolve(JSON.parse(body))
+                    const parsed = JSON.parse(body)
+                    finish(parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {})
                 } catch {
-                    resolve({})
+                    finish({})
                 }
             })
-            req.on('error', () => resolve({}))
+            req.on('error', () => finish({}))
+            req.on('close', () => finish({}))
         })
     }
 
@@ -462,8 +478,6 @@ class HttpService {
                 }
             } else if (pathname === '/api/v1/contacts') {
                 await this.handleContacts(url, res)
-            } else if (pathname === '/api/v1/group-members') {
-                await this.handleGroupMembers(url, res)
             } else if (pathname === '/api/v1/sns/timeline') {
                 if (req.method !== 'GET') return this.sendMethodNotAllowed(res, 'GET')
                 await this.handleSnsTimeline(url, res)
@@ -1040,54 +1054,6 @@ class HttpService {
         success: true,
         count: limited.length,
         contacts: limited
-      })
-    } catch (error) {
-      this.sendError(res, 500, String(error))
-    }
-  }
-
-  /**
-   * 处理群成员查询
-   * GET /api/v1/group-members?chatroomId=xxx@chatroom&includeMessageCounts=1&forceRefresh=0
-   */
-  private async handleGroupMembers(url: URL, res: http.ServerResponse): Promise<void> {
-    const chatroomId = (url.searchParams.get('chatroomId') || url.searchParams.get('talker') || '').trim()
-    const includeMessageCounts = this.parseBooleanParam(url, ['includeMessageCounts', 'withCounts'], false)
-    const forceRefresh = this.parseBooleanParam(url, ['forceRefresh'], false)
-
-    if (!chatroomId) {
-      this.sendError(res, 400, 'Missing chatroomId')
-      return
-    }
-
-    try {
-      const result = await groupAnalyticsService.getGroupMembersPanelData(chatroomId, {
-        forceRefresh,
-        includeMessageCounts
-      })
-      if (!result.success || !result.data) {
-        this.sendError(res, 500, result.error || 'Failed to get group members')
-        return
-      }
-
-      this.sendJson(res, {
-        success: true,
-        chatroomId,
-        count: result.data.length,
-        fromCache: result.fromCache,
-        updatedAt: result.updatedAt,
-        members: result.data.map((member) => ({
-          wxid: member.username,
-          displayName: member.displayName,
-          nickname: member.nickname || '',
-          remark: member.remark || '',
-          alias: member.alias || '',
-          groupNickname: member.groupNickname || '',
-          avatarUrl: member.avatarUrl,
-          isOwner: Boolean(member.isOwner),
-          isFriend: Boolean(member.isFriend),
-          messageCount: Number.isFinite(member.messageCount) ? member.messageCount : 0
-        }))
       })
     } catch (error) {
       this.sendError(res, 500, String(error))

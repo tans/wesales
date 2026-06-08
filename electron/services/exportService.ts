@@ -5980,79 +5980,15 @@ class ExportService {
     })
   }
 
-  // 补齐群成员，避免只导出发言者导致头像缺失
+  // 群成员列表已剥离：导出只保留消息中实际出现的发送者，避免读取完整群成员表。
   private async mergeGroupMembers(
     chatroomId: string,
     memberSet: Map<string, { member: ChatLabMember; avatarUrl?: string }>,
     includeAvatars: boolean
   ): Promise<void> {
-    const result = await wcdbService.getGroupMembers(chatroomId)
-    if (!result.success || !result.members || result.members.length === 0) return
-
-    const rawMembers = result.members as Array<{
-      username?: string
-      avatarUrl?: string
-      nickname?: string
-      displayName?: string
-      remark?: string
-      originalName?: string
-    }>
-    const usernames = rawMembers
-      .map((member) => member.username)
-      .filter((username): username is string => Boolean(username))
-    if (usernames.length === 0) return
-
-    const lookupUsernames = new Set<string>()
-    for (const username of usernames) {
-      lookupUsernames.add(username)
-      const cleaned = this.cleanAccountDirName(username)
-      if (cleaned && cleaned !== username) {
-        lookupUsernames.add(cleaned)
-      }
-    }
-
-    const [displayNames, avatarUrls] = await Promise.all([
-      wcdbService.getDisplayNames(Array.from(lookupUsernames)),
-      includeAvatars ? wcdbService.getAvatarUrls(Array.from(lookupUsernames)) : Promise.resolve({ success: true, map: {} as Record<string, string> })
-    ])
-
-    for (const member of rawMembers) {
-      const username = member.username
-      if (!username) continue
-
-      const cleaned = this.cleanAccountDirName(username)
-      const displayName = displayNames.success && displayNames.map
-        ? (displayNames.map[username] || (cleaned ? displayNames.map[cleaned] : undefined) || username)
-        : username
-      const groupNickname = member.nickname || member.displayName || member.remark || member.originalName
-      const avatarUrl = includeAvatars && avatarUrls.success && avatarUrls.map
-        ? (avatarUrls.map[username] || (cleaned ? avatarUrls.map[cleaned] : undefined) || member.avatarUrl)
-        : member.avatarUrl
-
-      const existing = memberSet.get(username)
-      if (existing) {
-        if (displayName && existing.member.accountName === existing.member.platformId && displayName !== existing.member.platformId) {
-          existing.member.accountName = displayName
-        }
-        if (groupNickname && !existing.member.groupNickname) {
-          existing.member.groupNickname = groupNickname
-        }
-        if (!existing.avatarUrl && avatarUrl) {
-          existing.avatarUrl = avatarUrl
-        }
-        memberSet.set(username, existing)
-        continue
-      }
-
-      const chatlabMember: ChatLabMember = {
-        platformId: username,
-        accountName: displayName
-      }
-      if (groupNickname) {
-        chatlabMember.groupNickname = groupNickname
-      }
-      memberSet.set(username, { member: chatlabMember, avatarUrl })
-    }
+    void chatroomId
+    void memberSet
+    void includeAvatars
   }
 
   private extractGroupMemberUsername(member: any): string {

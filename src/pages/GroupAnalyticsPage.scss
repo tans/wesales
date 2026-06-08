@@ -384,9 +384,12 @@
       text-overflow: ellipsis;
     }
 
-    .group-members {
+    .group-id {
       font-size: 12px;
       color: var(--text-tertiary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 }
@@ -1637,29 +1640,8 @@
     &:hover {
       background: rgba(255, 255, 255, 0.1);
     }
-  }
+  }}
 
-  .member-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .member-modal {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .member-export-modal {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .member-result-modal {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-}
-
-// 成员详情弹框
 .member-modal-overlay {
   position: fixed;
   inset: 0;

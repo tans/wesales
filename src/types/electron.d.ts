@@ -975,44 +975,8 @@ export interface ElectronAPI {
       data?: Array<{
         username: string
         displayName: string
-        memberCount: number
         avatarUrl?: string
       }>
-      error?: string
-    }>
-    getGroupMembers: (chatroomId: string) => Promise<{
-      success: boolean
-      data?: Array<{
-        username: string
-        displayName: string
-        avatarUrl?: string
-        nickname?: string
-        alias?: string
-        remark?: string
-        groupNickname?: string
-        isOwner?: boolean
-      }>
-      error?: string
-    }>
-    getGroupMembersPanelData: (
-      chatroomId: string,
-      options?: { forceRefresh?: boolean; includeMessageCounts?: boolean }
-    ) => Promise<{
-      success: boolean
-      data?: Array<{
-        username: string
-        displayName: string
-        avatarUrl?: string
-        nickname?: string
-        alias?: string
-        remark?: string
-        groupNickname?: string
-        isOwner?: boolean
-        isFriend: boolean
-        messageCount: number
-      }>
-      fromCache?: boolean
-      updatedAt?: number
       error?: string
     }>
     getGroupMessageRanking: (chatroomId: string, limit?: number, startTime?: number, endTime?: number) => Promise<{
@@ -1044,57 +1008,6 @@ export interface ElectronAPI {
         }>
         total: number
       }
-      error?: string
-    }>
-    getGroupMemberAnalytics: (chatroomId: string, memberUsername: string, startTime?: number, endTime?: number) => Promise<{
-      success: boolean
-      data?: {
-        statistics: {
-          totalMessages: number
-          textMessages: number
-          imageMessages: number
-          voiceMessages: number
-          videoMessages: number
-          emojiMessages: number
-          otherMessages: number
-          sentMessages: number
-          receivedMessages: number
-          firstMessageTime: number | null
-          lastMessageTime: number | null
-          activeDays: number
-          messageTypeCounts: Record<number, number>
-        }
-        timeDistribution: Record<number, number>
-      }
-      error?: string
-    }>
-    getGroupMemberMessages: (
-      chatroomId: string,
-      memberUsername: string,
-      options?: { startTime?: number; endTime?: number; limit?: number; cursor?: number }
-    ) => Promise<{
-      success: boolean
-      data?: {
-        messages: Message[]
-        hasMore: boolean
-        nextCursor: number
-      }
-      error?: string
-    }>
-    exportGroupMembers: (chatroomId: string, outputPath: string) => Promise<{
-      success: boolean
-      count?: number
-      error?: string
-    }>
-    exportGroupMemberMessages: (
-      chatroomId: string,
-      memberUsername: string,
-      outputPath: string,
-      startTime?: number,
-      endTime?: number
-    ) => Promise<{
-      success: boolean
-      count?: number
       error?: string
     }>
   }

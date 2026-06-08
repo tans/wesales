@@ -327,27 +327,6 @@ export class WcdbService {
     return this.callWorker('getAvatarUrls', { usernames })
   }
 
-  /**
-   * 获取群成员数量
-   */
-  async getGroupMemberCount(chatroomId: string): Promise<{ success: boolean; count?: number; error?: string }> {
-    return this.callWorker('getGroupMemberCount', { chatroomId })
-  }
-
-  /**
-   * 批量获取群成员数量
-   */
-  async getGroupMemberCounts(chatroomIds: string[]): Promise<{ success: boolean; map?: Record<string, number>; error?: string }> {
-    return this.callWorker('getGroupMemberCounts', { chatroomIds })
-  }
-
-  /**
-   * 获取群成员列表
-   */
-  async getGroupMembers(chatroomId: string): Promise<{ success: boolean; members?: any[]; error?: string }> {
-    return this.callWorker('getGroupMembers', { chatroomId })
-  }
-
   // 获取群成员群名片昵称
   async getGroupNicknames(chatroomId: string): Promise<{ success: boolean; nicknames?: Record<string, string>; error?: string }> {
     return this.callWorker('getGroupNicknames', { chatroomId })

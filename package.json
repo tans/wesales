@@ -20,7 +20,8 @@
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "electron:dev": "node scripts/prepare-electron-runtime.cjs && vite --mode electron",
-    "electron:build": "npm run build"
+    "electron:build": "npm run build",
+    "api:test": "node scripts/test-http-api.mjs"
   },
   "dependencies": {
     "@vscode/sudo-prompt": "^9.3.2",

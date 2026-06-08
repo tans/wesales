@@ -95,15 +95,6 @@ if (parentPort) {
                 case 'getAvatarUrls':
                     result = await core.getAvatarUrls(payload.usernames)
                     break
-                case 'getGroupMemberCount':
-                    result = await core.getGroupMemberCount(payload.chatroomId)
-                    break
-                case 'getGroupMemberCounts':
-                    result = await core.getGroupMemberCounts(payload.chatroomIds)
-                    break
-                case 'getGroupMembers':
-                    result = await core.getGroupMembers(payload.chatroomId)
-                    break
                 case 'getGroupNicknames':
                     result = await core.getGroupNicknames(payload.chatroomId)
                     break

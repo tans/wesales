@@ -4618,58 +4618,13 @@ class ChatService {
     privateMutualGroupMap: Record<string, number>
     groupMutualFriendMap: Record<string, number>
   }> {
+    void groupSessionIds
+    void selfIdentitySet
     const privateMutualGroupMap: Record<string, number> = {}
     const groupMutualFriendMap: Record<string, number> = {}
-    if (groupSessionIds.length === 0) {
-      return { privateMutualGroupMap, groupMutualFriendMap }
-    }
-
-    const privateIndex = new Map<string, Set<string>>()
     for (const sessionId of privateSessionIds) {
-      for (const key of this.buildIdentityKeys(sessionId)) {
-        const set = privateIndex.get(key) || new Set<string>()
-        set.add(sessionId)
-        privateIndex.set(key, set)
-      }
       privateMutualGroupMap[sessionId] = 0
     }
-
-    const friendIdentitySet = await this.getFriendIdentitySet()
-    await this.forEachWithConcurrency(groupSessionIds, 4, async (groupId) => {
-      const membersResult = await wcdbService.getGroupMembers(groupId)
-      if (!membersResult.success || !membersResult.members) {
-        groupMutualFriendMap[groupId] = 0
-        return
-      }
-
-      const touchedPrivateSessions = new Set<string>()
-      const friendMembers = new Set<string>()
-
-      for (const member of membersResult.members) {
-        const username = this.extractGroupMemberUsername(member)
-        const identityKeys = this.buildIdentityKeys(username)
-        if (identityKeys.length === 0) continue
-        const canonical = identityKeys[0]
-
-        if (!selfIdentitySet.has(canonical) && friendIdentitySet.has(canonical)) {
-          friendMembers.add(canonical)
-        }
-
-        for (const key of identityKeys) {
-          const linked = privateIndex.get(key)
-          if (!linked) continue
-          for (const sessionId of linked) {
-            touchedPrivateSessions.add(sessionId)
-          }
-        }
-      }
-
-      groupMutualFriendMap[groupId] = friendMembers.size
-      for (const sessionId of touchedPrivateSessions) {
-        privateMutualGroupMap[sessionId] = (privateMutualGroupMap[sessionId] || 0) + 1
-      }
-    })
-
     return { privateMutualGroupMap, groupMutualFriendMap }
   }
 
@@ -4716,9 +4671,7 @@ class ChatService {
     const isGroup = sessionId.endsWith('@chatroom')
 
     if (isGroup) {
-      const memberCountsResult = await wcdbService.getGroupMemberCounts([sessionId])
-      const memberCountMap = memberCountsResult.success && memberCountsResult.map ? memberCountsResult.map : {}
-      stats.groupMemberCount = typeof memberCountMap[sessionId] === 'number' ? Math.max(0, Math.floor(memberCountMap[sessionId])) : 0
+      stats.groupMemberCount = 0
     }
 
     if (includeRelations) {
@@ -4770,16 +4723,7 @@ class ChatService {
     const groupSessionIds = normalizedSessionIds.filter(sessionId => sessionId.endsWith('@chatroom'))
     const privateSessionIds = normalizedSessionIds.filter(sessionId => !sessionId.endsWith('@chatroom'))
 
-    let memberCountMap: Record<string, number> = {}
-    const shouldLoadGroupMemberCount = groupSessionIds.length > 0 && (includeRelations || normalizedSessionIds.length === 1)
-    if (shouldLoadGroupMemberCount) {
-      try {
-        const memberCountsResult = await wcdbService.getGroupMemberCounts(groupSessionIds)
-        memberCountMap = memberCountsResult.success && memberCountsResult.map ? memberCountsResult.map : {}
-      } catch {
-        memberCountMap = {}
-      }
-    }
+    const shouldLoadGroupMemberCount = false
 
     let privateMutualGroupMap: Record<string, number> = {}
     let groupMutualFriendMap: Record<string, number> = {}
@@ -4849,9 +4793,7 @@ class ChatService {
           )
         if (sessionId.endsWith('@chatroom')) {
           if (shouldLoadGroupMemberCount) {
-            stats.groupMemberCount = typeof memberCountMap[sessionId] === 'number'
-              ? Math.max(0, Math.floor(memberCountMap[sessionId]))
-              : 0
+            stats.groupMemberCount = 0
           }
           if (includeRelations) {
             stats.groupMutualFriends = typeof groupMutualFriendMap[sessionId] === 'number'

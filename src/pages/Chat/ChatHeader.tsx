@@ -11,8 +11,7 @@ import {
   Newspaper,
   RefreshCw,
   Search,
-  Sparkles,
-  Users
+  Sparkles
 } from 'lucide-react'
 import { Avatar } from '../../components/Avatar'
 import type { ChatSession } from '../../types/models'
@@ -22,7 +21,6 @@ export interface ChatHeaderProps {
   session: ChatSession
   isGroupChat: boolean
   standaloneSessionWindow: boolean
-  showGroupMembersPanel: boolean
   showGroupSummaryPanel: boolean
   showJumpPopover: boolean
   showInSessionSearch: boolean
@@ -44,7 +42,6 @@ export interface ChatHeaderProps {
   onTriggerSessionInsight: () => void
   onToggleGroupSummaryPanel: () => void
   onGroupAnalytics: () => void
-  onToggleGroupMembersPanel: () => void
   onExportCurrentSession: () => void
   onOpenSnsTimeline: () => void
   onBatchTranscribe: () => void
@@ -59,7 +56,6 @@ function ChatHeader({
   session,
   isGroupChat,
   standaloneSessionWindow,
-  showGroupMembersPanel,
   showGroupSummaryPanel,
   showJumpPopover,
   showInSessionSearch,
@@ -81,7 +77,6 @@ function ChatHeader({
   onTriggerSessionInsight,
   onToggleGroupSummaryPanel,
   onGroupAnalytics,
-  onToggleGroupMembersPanel,
   onExportCurrentSession,
   onOpenSnsTimeline,
   onBatchTranscribe,
@@ -137,15 +132,6 @@ function ChatHeader({
         {!standaloneSessionWindow && isGroupChat && (
           <button className="icon-btn group-analytics-btn" onClick={onGroupAnalytics} title="群聊分析">
             <BarChart3 size={18} />
-          </button>
-        )}
-        {isGroupChat && (
-          <button
-            className={`icon-btn group-members-btn ${showGroupMembersPanel ? 'active' : ''}`}
-            onClick={onToggleGroupMembersPanel}
-            title="群成员"
-          >
-            <Users size={18} />
           </button>
         )}
         {!standaloneSessionWindow && (
@@ -234,7 +220,6 @@ function areEqual(prev: ChatHeaderProps, next: ChatHeaderProps) {
     prev.session.avatarUrl === next.session.avatarUrl &&
     prev.isGroupChat === next.isGroupChat &&
     prev.standaloneSessionWindow === next.standaloneSessionWindow &&
-    prev.showGroupMembersPanel === next.showGroupMembersPanel &&
     prev.showGroupSummaryPanel === next.showGroupSummaryPanel &&
     prev.showJumpPopover === next.showJumpPopover &&
     prev.showInSessionSearch === next.showInSessionSearch &&
@@ -256,7 +241,6 @@ function areEqual(prev: ChatHeaderProps, next: ChatHeaderProps) {
     prev.onTriggerSessionInsight === next.onTriggerSessionInsight &&
     prev.onToggleGroupSummaryPanel === next.onToggleGroupSummaryPanel &&
     prev.onGroupAnalytics === next.onGroupAnalytics &&
-    prev.onToggleGroupMembersPanel === next.onToggleGroupMembersPanel &&
     prev.onExportCurrentSession === next.onExportCurrentSession &&
     prev.onOpenSnsTimeline === next.onOpenSnsTimeline &&
     prev.onBatchTranscribe === next.onBatchTranscribe &&
