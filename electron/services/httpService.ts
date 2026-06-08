@@ -620,16 +620,29 @@ class HttpService {
     startTime: number,
     endTime: number,
     ascending: boolean,
-    useLiteMapping: boolean = true
+    useLiteMapping: boolean = true,
+    requestId: string = ''
   ): Promise<{ success: boolean; messages?: Message[]; hasMore?: boolean; error?: string }> {
+    const totalStartedAt = Date.now()
+    const logPrefix = requestId ? `[HttpService][messages:${requestId}]` : '[HttpService][messages]'
+    let openCostMs = 0
+    let fetchCostMs = 0
+    let fetchBatches = 0
+    let fetchedRows = 0
+    let mapCostMs = 0
+    let closeCostMs = 0
+
     try {
       // 深分页时放大 batch，避免 offset 很大时出现大量小批次循环。
       const batchSize = Math.min(2000, Math.max(500, limit))
       const beginTimestamp = startTime > 10000000000 ? Math.floor(startTime / 1000) : startTime
       const endTimestamp = endTime > 10000000000 ? Math.floor(endTime / 1000) : endTime
 
+      const openStartedAt = Date.now()
       const cursorResult = await wcdbService.openMessageCursorLite(talker, batchSize, ascending, beginTimestamp, endTimestamp)
+      openCostMs = Date.now() - openStartedAt
       if (!cursorResult.success || !cursorResult.cursor) {
+        console.warn(`${logPrefix} open cursor failed cost=${openCostMs}ms talker=${talker} limit=${limit} offset=${offset} error=${cursorResult.error || ''}`)
         return { success: false, error: cursorResult.error || '打开消息游标失败' }
       }
 
@@ -642,13 +655,17 @@ class HttpService {
 
         // 循环获取消息，处理 offset 跳过 + limit 累积
         while (collectedRows.length < limit && hasMore) {
+          const fetchStartedAt = Date.now()
           const batch = await wcdbService.fetchMessageBatch(cursor)
+          fetchCostMs += Date.now() - fetchStartedAt
+          fetchBatches += 1
           if (!batch.success || !batch.rows || batch.rows.length === 0) {
             hasMore = false
             break
           }
 
           let rows = batch.rows
+          fetchedRows += rows.length
           hasMore = batch.hasMore === true
 
           // 处理 offset：跳过前 N 条
@@ -673,16 +690,29 @@ class HttpService {
         }
 
         const finalHasMore = hasMore || reachedLimit
+        const mapStartedAt = Date.now()
         const messages = useLiteMapping
           ? chatService.mapRowsToMessagesLiteForApi(collectedRows)
-          : chatService.mapRowsToMessagesForApi(collectedRows)
-        await this.backfillMissingSenderUsernames(talker, messages)
+          : chatService.mapRowsToMessagesForApi(collectedRows, talker)
+        if (talker.endsWith('@chatroom')) {
+          // HTTP API 优先稳定和速度：群聊不再额外补全成员 username，统一置空。
+          for (const msg of messages) {
+            msg.senderUsername = ''
+          }
+        }
+        mapCostMs = Date.now() - mapStartedAt
+        console.log(`${logPrefix} fetch done total=${Date.now() - totalStartedAt}ms open=${openCostMs}ms fetch=${fetchCostMs}ms batches=${fetchBatches} fetchedRows=${fetchedRows} returnedRows=${collectedRows.length} map=${mapCostMs}ms talker=${talker} limit=${limit} offset=${offset} start=${beginTimestamp} end=${endTimestamp} hasMore=${finalHasMore}`)
         return { success: true, messages, hasMore: finalHasMore }
       } finally {
+        const closeStartedAt = Date.now()
         await wcdbService.closeMessageCursor(cursor)
+        closeCostMs = Date.now() - closeStartedAt
+        if (closeCostMs > 1000) {
+          console.warn(`${logPrefix} close cursor slow cost=${closeCostMs}ms talker=${talker}`)
+        }
       }
     } catch (e) {
-      console.error('[HttpService] fetchMessagesBatch error:', e)
+      console.error(`${logPrefix} fetchMessagesBatch error total=${Date.now() - totalStartedAt}ms open=${openCostMs}ms fetch=${fetchCostMs}ms batches=${fetchBatches} fetchedRows=${fetchedRows} map=${mapCostMs}ms close=${closeCostMs}ms talker=${talker} limit=${limit} offset=${offset}:`, e)
       return { success: false, error: String(e) }
     }
   }
@@ -822,6 +852,8 @@ class HttpService {
   }
 
   private async handleMessages(url: URL, res: http.ServerResponse): Promise<void> {
+    const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+    const requestStartedAt = Date.now()
     const talker = (url.searchParams.get('talker') || '').trim()
     const limit = this.parseIntParam(url.searchParams.get('limit'), 100, 1, 10000)
     const offset = this.parseIntParam(url.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER)
@@ -831,90 +863,96 @@ class HttpService {
     const chatlab = this.parseBooleanParam(url, ['chatlab'], false)
     const formatParam = (url.searchParams.get('format') || '').trim().toLowerCase()
     const format = formatParam || (chatlab ? 'chatlab' : 'json')
-    const mediaOptions = this.parseMediaOptions(url)
+    const mediaRequested = this.parseBooleanParam(url, ['media', 'meiti'], false)
+    const logPrefix = `[HttpService][messages:${requestId}]`
+
+    console.log(`${logPrefix} request start talker=${talker || '(missing)'} limit=${limit} offset=${offset} start=${startParam || ''} end=${endParam || ''} format=${format} keyword=${keyword ? 1 : 0} media=${mediaRequested ? 1 : 0}`)
 
     if (!talker) {
       this.sendError(res, 400, 'Missing required parameter: talker')
+      console.warn(`${logPrefix} request rejected reason=missing_talker total=${Date.now() - requestStartedAt}ms`)
+      return
+    }
+
+    if (keyword) {
+      this.sendError(res, 400, 'keyword search is temporarily disabled')
+      console.warn(`${logPrefix} request rejected reason=keyword_disabled total=${Date.now() - requestStartedAt}ms talker=${talker}`)
+      return
+    }
+
+    if (mediaRequested) {
+      this.sendError(res, 400, 'media export is temporarily disabled')
+      console.warn(`${logPrefix} request rejected reason=media_disabled total=${Date.now() - requestStartedAt}ms talker=${talker}`)
       return
     }
 
     if (format !== 'json' && format !== 'chatlab') {
       this.sendError(res, 400, 'Invalid format, supported: json/chatlab')
+      console.warn(`${logPrefix} request rejected reason=invalid_format total=${Date.now() - requestStartedAt}ms talker=${talker} format=${format}`)
       return
     }
 
     const startTime = this.parseTimeParam(startParam)
     const endTime = this.parseTimeParam(endParam, true)
-    let messages: Message[] = []
-    let hasMore = false
-
-    if (keyword) {
-      const searchLimit = Math.max(1, limit) + 1
-      const searchResult = await chatService.searchMessages(
-        keyword,
-        talker,
-        searchLimit,
-        offset,
-        startTime,
-        endTime
-      )
-      if (!searchResult.success || !searchResult.messages) {
-        this.sendError(res, 500, searchResult.error || 'Failed to search messages')
-        return
-      }
-      hasMore = searchResult.messages.length > limit
-      messages = hasMore ? searchResult.messages.slice(0, limit) : searchResult.messages
-    } else {
-      const result = await this.fetchMessagesBatch(
-        talker,
-        offset,
-        limit,
-        startTime,
-        endTime,
-        false,
-        !mediaOptions.enabled
-      )
-      if (!result.success || !result.messages) {
-        this.sendError(res, 500, result.error || 'Failed to get messages')
-        return
-      }
-      messages = result.messages
-      hasMore = result.hasMore === true
+    const fetchStartedAt = Date.now()
+    const result = await this.fetchMessagesBatch(
+      talker,
+      offset,
+      limit,
+      startTime,
+      endTime,
+      false,
+      true,
+      requestId
+    )
+    const fetchTotalMs = Date.now() - fetchStartedAt
+    if (!result.success || !result.messages) {
+      this.sendError(res, 500, result.error || 'Failed to get messages')
+      console.warn(`${logPrefix} request failed stage=fetch fetch=${fetchTotalMs}ms total=${Date.now() - requestStartedAt}ms talker=${talker} error=${result.error || ''}`)
+      return
     }
+    const messages = result.messages
+    const hasMore = result.hasMore === true
 
-    const mediaMap = mediaOptions.enabled
-      ? await this.exportMediaForMessages(messages, talker, mediaOptions)
-      : new Map<number, ApiExportedMedia>()
+    const mediaMap = new Map<number, ApiExportedMedia>()
 
+    const displayNameStartedAt = Date.now()
     const displayNames = await this.getDisplayNames([talker])
+    const displayNameMs = Date.now() - displayNameStartedAt
     const talkerName = displayNames[talker] || talker
 
     if (format === 'chatlab') {
+      const convertStartedAt = Date.now()
       const chatLabData = await this.convertToChatLab(messages, talker, talkerName, mediaMap)
+      const convertMs = Date.now() - convertStartedAt
       this.sendJson(res, {
         ...chatLabData,
         media: {
-          enabled: mediaOptions.enabled,
+          enabled: false,
           exportPath: this.getApiMediaExportPath(),
           count: mediaMap.size
         }
       })
+      console.log(`${logPrefix} request done format=chatlab total=${Date.now() - requestStartedAt}ms fetch=${fetchTotalMs}ms displayName=${displayNameMs}ms convert=${convertMs}ms count=${messages.length} hasMore=${hasMore} talker=${talker}`)
       return
     }
 
+    const mapStartedAt = Date.now()
     const apiMessages = messages.map((msg) => this.toApiMessage(msg, mediaMap.get(msg.localId)))
+    const responseMapMs = Date.now() - mapStartedAt
     this.sendJson(res, {
       success: true,
       talker,
       count: apiMessages.length,
       hasMore,
       media: {
-        enabled: mediaOptions.enabled,
+        enabled: false,
         exportPath: this.getApiMediaExportPath(),
         count: mediaMap.size
       },
       messages: apiMessages
     })
+    console.log(`${logPrefix} request done format=json total=${Date.now() - requestStartedAt}ms fetch=${fetchTotalMs}ms displayName=${displayNameMs}ms responseMap=${responseMapMs}ms count=${apiMessages.length} hasMore=${hasMore} talker=${talker}`)
   }
 
   /**
@@ -1793,6 +1831,14 @@ class HttpService {
     groupNicknamesMap: Map<string, string>
   ): { sender: string; accountName: string; groupNickname?: string } {
     let sender = String(msg.senderUsername || '').trim()
+    if (isGroup) {
+      // HTTP API 临时策略：群聊不暴露/补全成员 username，ChatLab 输出也保持为空。
+      return {
+        sender: '',
+        accountName: '',
+        groupNickname: undefined
+      }
+    }
     let usedUnknownPlaceholder = false
     const sameAsMe = sender && myWxid && sender.toLowerCase() === myWxid.toLowerCase()
     const isSelf = msg.isSend === 1 || sameAsMe

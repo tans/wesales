@@ -129,14 +129,14 @@ GET /api/v1/messages
 | `offset`  | number | 否   | 分页偏移，默认 `0`                                    |
 | `start`   | string | 否   | 开始时间，支持 `YYYYMMDD` 或时间戳                    |
 | `end`     | string | 否   | 结束时间，支持 `YYYYMMDD` 或时间戳                    |
-| `keyword` | string | 否   | 基于消息显示文本过滤                                  |
+| `keyword` | string | 否   | 暂时禁用：传入该参数会返回 400，避免大范围搜索拖慢接口       |
 | `chatlab` | string | 否   | `1/true` 时输出 ChatLab 格式                          |
 | `format`  | string | 否   | `json` 或 `chatlab`                                   |
-| `media`   | string | 否   | `1/true` 时导出媒体并返回媒体地址，兼容别名 `meiti`   |
-| `image`   | string | 否   | 在 `media=1` 时控制图片导出，兼容别名 `tupian`        |
-| `voice`   | string | 否   | 在 `media=1` 时控制语音导出，兼容别名 `vioce`         |
-| `video`   | string | 否   | 在 `media=1` 时控制视频导出                           |
-| `emoji`   | string | 否   | 在 `media=1` 时控制表情导出                           |
+| `media`   | string | 否   | 暂时禁用：`media=1` 会返回 400，避免消息读取被媒体导出阻塞 |
+| `image`   | string | 否   | 暂时无效                                               |
+| `voice`   | string | 否   | 暂时无效                                               |
+| `video`   | string | 否   | 暂时无效                                               |
+| `emoji`   | string | 否   | 暂时无效                                               |
 
 ### 示例
 
@@ -144,8 +144,9 @@ GET /api/v1/messages
 curl "http://127.0.0.1:5031/api/v1/messages?talker=wxid_xxx&limit=20"
 curl "http://127.0.0.1:5031/api/v1/messages?talker=xxx@chatroom&chatlab=1"
 curl "http://127.0.0.1:5031/api/v1/messages?talker=wxid_xxx&start=20260101&end=20260131"
-curl "http://127.0.0.1:5031/api/v1/messages?talker=xxx@chatroom&media=1&image=1&voice=0&video=0&emoji=0"
 ```
+
+> 当前临时禁用 `keyword` 搜索和 `media=1` 媒体导出；传入这些参数会返回 400，以保证消息读取接口稳定性。
 
 ### JSON 响应字段
 
